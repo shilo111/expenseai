@@ -232,12 +232,22 @@ input[type=number]:focus,input[type=date]:focus{border-color:var(--accent)}
       <div class="metric"><div class="metric-label">Monthly avg</div><div class="metric-val" style="color:var(--text3)">—</div></div>
       <div class="metric"><div class="metric-label">Transactions</div><div class="metric-val" style="color:var(--text3)">—</div></div>
     </div>
+    <!-- Forecast + quick add row -->
+    <div id="forecast-bar" style="display:none;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn btn-surface btn-sm" onclick="showPage('compare')" style="flex:1;font-size:12px">📊 Compare</button>
+      <button class="btn btn-surface btn-sm" onclick="showPage('annual')" style="flex:1;font-size:12px">📅 Annual</button>
+      <button class="btn btn-accent btn-sm" onclick="showAddModal()" style="flex:1;font-size:12px">+ Add</button>
+    </div>
     <div class="card">
-      <div class="card-title">Monthly trend</div>
+      <div class="card-title">Last 6 months</div>
       <div class="chart-wrap"><canvas id="monthChart"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">By category</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="card-title" style="margin:0">By category</div>
+        <button class="btn btn-surface btn-sm" onclick="showPage('budget')" style="font-size:11px">🎯 Budgets</button>
+      </div>
       <div id="cat-list"></div>
     </div>
   </div>
@@ -249,6 +259,9 @@ input[type=number]:focus,input[type=date]:focus{border-color:var(--accent)}
 
   <!-- TRANSACTIONS -->
   <div class="page" id="page-transactions">
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input type="search" id="tx-search" placeholder="🔍 Search..." oninput="renderTransactions()" style="flex:1">
+    </div>
     <div class="filter-row">
       <select id="filter-month" onchange="renderTransactions()"><option value="">All months</option></select>
       <select id="filter-cat" onchange="renderTransactions()"><option value="">All cats</option></select>
@@ -270,6 +283,73 @@ input[type=number]:focus,input[type=date]:focus{border-color:var(--accent)}
     <div class="card" style="padding:0">
       <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)" id="mapping-stats"></div>
       <div style="padding:0 14px" id="mapping-list"></div>
+    </div>
+  </div>
+
+  <!-- BUDGET PAGE -->
+  <div class="page" id="page-budget">
+    <div class="section-head">
+      <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="showPage('dashboard')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        <div class="section-title">Monthly budgets</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Set a monthly limit per category. You'll get a warning when you're over 80%.</div>
+    <div id="budget-list"></div>
+  </div>
+
+  <!-- COMPARE PAGE -->
+  <div class="page" id="page-compare">
+    <div class="section-head">
+      <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="showPage('dashboard')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        <div class="section-title">Compare months</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div><div style="font-size:11px;color:var(--text3);margin-bottom:5px">Month A</div><select id="cmp-a" onchange="renderCompare()"></select></div>
+      <div><div style="font-size:11px;color:var(--text3);margin-bottom:5px">Month B</div><select id="cmp-b" onchange="renderCompare()"></select></div>
+    </div>
+    <div id="compare-content"></div>
+  </div>
+
+  <!-- ANNUAL PAGE -->
+  <div class="page" id="page-annual">
+    <div class="section-head">
+      <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="showPage('dashboard')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        <div class="section-title">Annual summary</div>
+      </div>
+      <select id="annual-year" onchange="renderAnnual()" style="width:auto;font-size:12px;padding:5px 8px"></select>
+    </div>
+    <div id="annual-content"></div>
+  </div>
+
+  <!-- SAVINGS PAGE -->
+  <div class="page" id="page-savings">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="section-title">💰 Savings opportunities</div>
+      <button class="btn btn-accent btn-sm" onclick="runSavingsAI()" id="savings-btn" style="font-size:11px;padding:6px 12px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Analyze
+      </button>
+    </div>
+    <!-- Goal setter -->
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🎯 Monthly savings goal</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:14px;color:var(--text2)">₪</span>
+        <input type="number" id="savings-goal" min="0" step="100" placeholder="e.g. 500"
+          onchange="setSavingsGoal(this.value)"
+          style="flex:1;font-size:15px;font-weight:600;font-family:var(--mono)">
+      </div>
+      <div id="goal-progress" style="margin-top:10px"></div>
+    </div>
+    <div id="savings-content">
+      <div class="empty" style="padding:30px 16px">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;display:block;opacity:.4"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        <div>Tap "Analyze" to get AI-powered saving suggestions based on your spending patterns.</div>
+      </div>
     </div>
   </div>
 
@@ -355,9 +435,9 @@ input[type=number]:focus,input[type=date]:focus{border-color:var(--accent)}
     <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
     <span>Transactions</span>
   </button>
-  <button class="nav-btn" id="nav-mapping" onclick="showPage('mapping')">
-    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
-    <span>Mapping</span>
+  <button class="nav-btn" id="nav-savings" onclick="showPage('savings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+    <span>Savings</span>
   </button>
   <button class="nav-btn" id="nav-upload" onclick="showPage('upload')">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -377,7 +457,7 @@ const CAT_EMOJI={Grocery:'🛒',Restaurants:'🍽️',Coffee:'☕',Gas:'⛽',Pha
 const CAT_COLORS={Grocery:'#3dd68c',Restaurants:'#f5a623',Coffee:'#fb923c',Gas:'#a78bfa',Pharmacy:'#f472b6',Health:'#3dd68c',Shopping:'#818cf8',Travel:'#4a9eff',Entertainment:'#fb923c',Utilities:'#6b7280',Education:'#2dd4bf',Insurance:'#60a5fa',Subscriptions:'#4a9eff',Transportation:'#ff5f57',Transfers:'#6b7280',Other:'#4b5563'};
 const CAT_BADGE={Grocery:'b-green',Restaurants:'b-amber',Coffee:'b-orange',Gas:'b-purple',Pharmacy:'b-pink',Health:'b-green',Shopping:'b-purple',Travel:'b-blue',Entertainment:'b-orange',Utilities:'b-gray',Education:'b-teal',Insurance:'b-blue',Subscriptions:'b-blue',Transportation:'b-red',Transfers:'b-gray',Other:'b-gray'};
 
-let S={transactions:[],mapping:{},pending:[]};
+let S={transactions:[],mapping:{},pending:[],budgets:{},savingsGoal:0,savingsInsights:null};
 let selMonth='';
 let mChart=null;
 let _dbReady=false;
@@ -454,12 +534,17 @@ function showPage(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
-  document.getElementById('nav-'+p).classList.add('active');
+  const navEl=document.getElementById('nav-'+p);
+  if(navEl){navEl.classList.add('active');}
   document.getElementById('main-content').scrollTop=0;
   if(p==='dashboard')renderDashboard();
   if(p==='transactions')renderTransactions();
   if(p==='mapping')renderMapping();
   if(p==='anomalies')renderAnomalies();
+  if(p==='budget')renderBudget();
+  if(p==='compare')renderCompare();
+  if(p==='annual')renderAnnual();
+  if(p==='savings')renderSavings();
 }
 
 // ── UPLOAD ──────────────────────────────────────────
@@ -727,15 +812,26 @@ function getMonthFromPages(pages,filename){
 }
 
 function fixRTL(text){
-  // Isracard PDF items come RTL — reverse word order for Hebrew-dominant strings
   if(!text) return text;
-  const words=text.split(/\s+/);
-  // If more than half chars are Hebrew, reverse the words
+  // Count Hebrew characters
   const hebrewChars=(text.match(/[\u0590-\u05FF]/g)||[]).length;
-  if(hebrewChars > text.replace(/\s/g,'').length*0.3 && words.length>1){
+  const total=text.replace(/\s/g,'').length;
+  if(hebrewChars===0) return text;
+  // Hebrew dominant — reverse word order (PDF extracts RTL as LTR)
+  const words=text.split(/\s+/);
+  if(words.length>1 && hebrewChars>total*0.3){
     return words.reverse().join(' ');
   }
   return text;
+}
+
+// Wrap Hebrew text in RTL span for correct display
+function rtl(text){
+  if(!text) return '';
+  const fixed=fixRTL(text);
+  const hc=(fixed.match(/[\u0590-\u05FF]/g)||[]).length;
+  if(hc>0) return `<span style="direction:rtl;unicode-bidi:embed;display:inline-block">${fixed}</span>`;
+  return fixed;
 }
 
 function showPreview(){
@@ -872,6 +968,7 @@ function renderDashboard(){
   if(!months.length){
     document.getElementById('month-pills').innerHTML='';
     document.getElementById('cat-list').innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/></svg>Upload PDFs to get started</div>';
+    document.getElementById('forecast-bar').style.display='none';
     return;
   }
   if(!selMonth||!months.includes(selMonth)) selMonth=months[months.length-1];
@@ -885,6 +982,34 @@ function renderDashboard(){
   const avg=months.length?txs.reduce((s,t)=>s+t.amount,0)/months.length:0;
   const diff=prevTotal?((total-prevTotal)/prevTotal*100):null;
 
+  // Forecast: assume current month, estimate end-of-month total
+  const isCurrentMonth=selMonth===months[months.length-1];
+  let forecastHTML='';
+  if(isCurrentMonth&&selTxs.length>0){
+    const now=new Date();
+    const dayOfMonth=now.getDate();
+    const daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+    const dailyRate=total/dayOfMonth;
+    const forecast=Math.round(dailyRate*daysInMonth);
+    const pct=Math.round((dayOfMonth/daysInMonth)*100);
+    forecastHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">📈 Month forecast</div>
+        <div style="font-size:11px;color:var(--text3)">${pct}% of month</div>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:6px">
+        <div style="font-size:20px;font-weight:600;font-family:var(--mono)">₪${forecast.toLocaleString()}</div>
+        <div style="font-size:12px;color:var(--text3)">estimated total</div>
+      </div>
+      <div style="height:4px;background:var(--border);border-radius:2px;margin-top:10px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;border-radius:2px;background:${pct>80?'var(--amber)':'var(--accent)'}"></div>
+      </div>
+    </div>`;
+  }
+  const fbar=document.getElementById('forecast-bar');
+  fbar.style.display=forecastHTML?'block':'none';
+  fbar.innerHTML=forecastHTML;
+
   document.getElementById('dash-metrics').innerHTML=`
     <div class="metric"><div class="metric-label">This month</div><div class="metric-val">₪${Math.round(total).toLocaleString()}</div><div class="metric-sub">${selMonth}</div></div>
     <div class="metric"><div class="metric-label">vs last month</div>
@@ -894,7 +1019,9 @@ function renderDashboard(){
     <div class="metric"><div class="metric-label">Monthly avg</div><div class="metric-val">₪${Math.round(avg).toLocaleString()}</div><div class="metric-sub">${months.length} months</div></div>
     <div class="metric"><div class="metric-label">Transactions</div><div class="metric-val">${selTxs.length}</div><div class="metric-sub">this month</div></div>`;
 
-  const monthTotals=months.map(m=>({m,v:txs.filter(t=>t.month===m).reduce((s,t)=>s+t.amount,0)}));
+  // Last 6 months for chart
+  const last6=months.slice(-6);
+  const monthTotals=last6.map(m=>({m,v:txs.filter(t=>t.month===m).reduce((s,t)=>s+t.amount,0)}));
   if(mChart)mChart.destroy();
   mChart=new Chart(document.getElementById('monthChart'),{
     type:'bar',
@@ -908,16 +1035,21 @@ function renderDashboard(){
   selTxs.forEach(t=>{catTotals[t.category]=(catTotals[t.category]||0)+t.amount});
   const catEntries=Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
   const grandTotal=catEntries.reduce((s,c)=>s+c[1],0);
+  const budgets=S.budgets||{};
   document.getElementById('cat-list').innerHTML=catEntries.map(([cat,amt])=>{
     const pct=grandTotal?amt/grandTotal*100:0;
+    const budget=budgets[cat];
+    const budgetPct=budget?Math.min(100,amt/budget*100):null;
+    const overBudget=budget&&amt>budget;
+    const nearBudget=budget&&!overBudget&&budgetPct>80;
     return`<div class="cat-row">
       <div class="cat-dot" style="background:${CAT_COLORS[cat]||'#6b7280'}"></div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <span class="cat-name">${CAT_EMOJI[cat]||''} ${cat}</span>
-          <span class="cat-amount">₪${Math.round(amt).toLocaleString()}</span>
+          <span class="cat-name">${CAT_EMOJI[cat]||''} ${cat}${overBudget?' 🔴':nearBudget?' 🟡':''}</span>
+          <span class="cat-amount">₪${Math.round(amt).toLocaleString()}${budget?`<span style="font-size:10px;color:var(--text3)"> / ₪${Math.round(budget).toLocaleString()}</span>`:''}</span>
         </div>
-        <div class="cat-bar"><div class="cat-bar-fill" style="width:${pct}%;background:${CAT_COLORS[cat]||'#6b7280'}"></div></div>
+        <div class="cat-bar"><div class="cat-bar-fill" style="width:${budgetPct!==null?budgetPct:pct}%;background:${overBudget?'var(--red)':nearBudget?'var(--amber)':CAT_COLORS[cat]||'#6b7280'}"></div></div>
       </div>
       <span class="cat-pct">${pct.toFixed(0)}%</span>
     </div>`;
@@ -1000,15 +1132,17 @@ function updateAnomalyDot(n){
 function renderTransactions(){
   const fm=document.getElementById('filter-month');
   const fc=document.getElementById('filter-cat');
+  const search=(document.getElementById('tx-search')?.value||'').toLowerCase();
   const months=[...new Set(S.transactions.map(t=>t.month))].sort();
   const cats=[...new Set(S.transactions.map(t=>t.category).filter(Boolean))].sort();
   const fmv=fm.value,fcv=fc.value;
   fm.innerHTML='<option value="">All months</option>'+months.map(m=>`<option value="${m}">${m}</option>`).join('');
-  fc.innerHTML='<option value="">All cats</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  fc.innerHTML='<option value="">All cats</option>'+cats.map(c=>`<option value="${c}">${CAT_EMOJI[c]||''} ${c}</option>`).join('');
   if(fmv)fm.value=fmv;if(fcv)fc.value=fcv;
   let txs=[...S.transactions];
   if(fm.value)txs=txs.filter(t=>t.month===fm.value);
   if(fc.value)txs=txs.filter(t=>t.category===fc.value);
+  if(search)txs=txs.filter(t=>fixRTL(t.supplier).toLowerCase().includes(search)||t.category.toLowerCase().includes(search));
   txs.sort((a,b)=>b.amount-a.amount);
   const el=document.getElementById('tx-list');
   if(!txs.length){el.innerHTML='<div class="empty">No transactions yet</div>';return}
@@ -1208,6 +1342,293 @@ function restoreData(input){
   };
   r.readAsText(file);
   input.value='';
+}
+
+// ── BUDGET ──────────────────────────────────────────
+function renderBudget(){
+  if(!S.budgets)S.budgets={};
+  const el=document.getElementById('budget-list');
+  el.innerHTML=CATS.map(cat=>{
+    const budget=S.budgets[cat]||'';
+    return`<div class="card" style="padding:12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="font-size:13px">${CAT_EMOJI[cat]||''} ${cat}</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:12px;color:var(--text3)">₪</span>
+          <input type="number" min="0" step="100" placeholder="No limit"
+            value="${budget}"
+            onchange="setBudget('${cat}',this.value)"
+            style="width:100px;font-size:13px;text-align:right;padding:5px 8px">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function setBudget(cat,val){
+  if(!S.budgets)S.budgets={};
+  const n=parseFloat(val);
+  if(n>0)S.budgets[cat]=n;
+  else delete S.budgets[cat];
+  saveState();
+}
+
+// ── COMPARE ──────────────────────────────────────────
+function renderCompare(){
+  const months=[...new Set(S.transactions.map(t=>t.month))].sort();
+  const sa=document.getElementById('cmp-a');
+  const sb=document.getElementById('cmp-b');
+  if(!sa||!sb)return;
+  const av=sa.value,bv=sb.value;
+  sa.innerHTML=months.map(m=>`<option value="${m}">${m}</option>`).join('');
+  sb.innerHTML=months.map(m=>`<option value="${m}">${m}</option>`).join('');
+  if(av)sa.value=av;else if(months.length>=2)sa.value=months[months.length-2];
+  if(bv)sb.value=bv;else if(months.length>=1)sb.value=months[months.length-1];
+  const mA=sa.value,mB=sb.value;
+  if(!mA||!mB){document.getElementById('compare-content').innerHTML='<div class="empty">Select two months</div>';return}
+  const txA=S.transactions.filter(t=>t.month===mA);
+  const txB=S.transactions.filter(t=>t.month===mB);
+  const totA=txA.reduce((s,t)=>s+t.amount,0);
+  const totB=txB.reduce((s,t)=>s+t.amount,0);
+  const cats=[...new Set([...txA,...txB].map(t=>t.category).filter(Boolean))].sort();
+  const diff=totA?((totB-totA)/totA*100):null;
+  document.getElementById('compare-content').innerHTML=`
+    <div class="metrics" style="margin-bottom:14px">
+      <div class="metric"><div class="metric-label">${mA}</div><div class="metric-val">₪${Math.round(totA).toLocaleString()}</div></div>
+      <div class="metric"><div class="metric-label">${mB}</div><div class="metric-val">₪${Math.round(totB).toLocaleString()}</div><div class="metric-sub" style="color:${diff===null?'var(--text3)':diff>0?'var(--red)':'var(--green)'}">${diff===null?'':((diff>0?'▲':'▼')+Math.abs(diff).toFixed(1)+'%')}</div></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+    ${cats.map(cat=>{
+      const a=txA.filter(t=>t.category===cat).reduce((s,t)=>s+t.amount,0);
+      const b=txB.filter(t=>t.category===cat).reduce((s,t)=>s+t.amount,0);
+      const d=a?((b-a)/a*100):null;
+      const max=Math.max(a,b,1);
+      return`<div style="padding:10px 14px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:12px">${CAT_EMOJI[cat]||''} ${cat}</span>
+          <span style="font-size:11px;color:${d===null?'var(--text3)':d>0?'var(--red)':'var(--green)'}">${d===null?'new':(d>0?'▲':'▼')+Math.abs(d).toFixed(0)+'%'}</span>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center">
+          <span style="font-size:10px;color:var(--text3);min-width:60px;text-align:right">₪${Math.round(a).toLocaleString()}</span>
+          <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="width:${a/max*100}%;height:100%;background:var(--text3);border-radius:3px;float:right"></div>
+          </div>
+          <div style="width:1px;height:10px;background:var(--border2)"></div>
+          <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="width:${b/max*100}%;height:100%;background:var(--accent);border-radius:3px"></div>
+          </div>
+          <span style="font-size:10px;color:var(--accent);min-width:60px">₪${Math.round(b).toLocaleString()}</span>
+        </div>
+      </div>`;
+    }).join('')}
+    </div>`;
+}
+
+// ── ANNUAL ──────────────────────────────────────────
+function renderAnnual(){
+  const txs=S.transactions;
+  const allYears=[...new Set(txs.map(t=>{const p=t.month?.split('/');return p?'20'+p[1]:null}).filter(Boolean))].sort();
+  const sel=document.getElementById('annual-year');
+  if(!sel)return;
+  const prev=sel.value;
+  sel.innerHTML=allYears.map(y=>`<option value="${y}">${y}</option>`).join('');
+  if(prev&&allYears.includes(prev))sel.value=prev;
+  else sel.value=allYears[allYears.length-1]||'';
+  const year=sel.value;
+  if(!year){document.getElementById('annual-content').innerHTML='<div class="empty">No data</div>';return}
+  const yy=year.slice(-2);
+  const yearTxs=txs.filter(t=>t.month?.endsWith('/'+yy));
+  const total=yearTxs.reduce((s,t)=>s+t.amount,0);
+  const catTotals={};
+  yearTxs.forEach(t=>{catTotals[t.category]=(catTotals[t.category]||0)+t.amount});
+  const cats=Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+  const months=[...new Set(yearTxs.map(t=>t.month))].sort();
+  document.getElementById('annual-content').innerHTML=`
+    <div class="metrics" style="margin-bottom:14px">
+      <div class="metric"><div class="metric-label">Total ${year}</div><div class="metric-val">₪${Math.round(total).toLocaleString()}</div></div>
+      <div class="metric"><div class="metric-label">Monthly avg</div><div class="metric-val">₪${Math.round(total/(months.length||1)).toLocaleString()}</div><div class="metric-sub">${months.length} months</div></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+    ${cats.map(([cat,amt])=>{
+      const pct=total?amt/total*100:0;
+      return`<div style="padding:10px 14px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <span style="font-size:13px">${CAT_EMOJI[cat]||''} ${cat}</span>
+          <span style="font-size:13px;font-weight:600;font-family:var(--mono)">₪${Math.round(amt).toLocaleString()}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;border-radius:3px;background:${CAT_COLORS[cat]||'#6b7280'}"></div>
+          </div>
+          <span style="font-size:10px;color:var(--text3);min-width:30px">${pct.toFixed(0)}%</span>
+        </div>
+      </div>`;
+    }).join('')}
+    </div>`;
+}
+
+// ── SAVINGS ──────────────────────────────────────────
+function renderSavings(){
+  const goal=S.savingsGoal||0;
+  const inp=document.getElementById('savings-goal');
+  if(inp&&goal)inp.value=goal;
+  renderGoalProgress();
+  // Show cached results if any
+  if(S.savingsInsights&&S.savingsInsights.length){
+    renderSavingsCards(S.savingsInsights);
+  }
+}
+
+function setSavingsGoal(val){
+  S.savingsGoal=parseFloat(val)||0;
+  saveState();
+  renderGoalProgress();
+}
+
+function renderGoalProgress(){
+  const goal=S.savingsGoal||0;
+  const el=document.getElementById('goal-progress');
+  if(!el)return;
+  if(!goal){el.innerHTML='';return}
+  // Calculate what can be saved based on AI insights
+  const totalPotential=S.savingsInsights?S.savingsInsights.reduce((s,i)=>s+i.monthlySaving,0):0;
+  const pct=Math.min(100,totalPotential/goal*100);
+  const achieved=totalPotential>=goal;
+  el.innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px">
+      <span style="color:var(--text3)">Potential saving</span>
+      <span style="color:${achieved?'var(--green)':'var(--amber)'}">₪${Math.round(totalPotential).toLocaleString()} / ₪${Math.round(goal).toLocaleString()}</span>
+    </div>
+    <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+      <div style="width:${pct}%;height:100%;border-radius:3px;background:${achieved?'var(--green)':'var(--amber)'}"></div>
+    </div>
+    <div style="font-size:11px;color:${achieved?'var(--green)':'var(--text3)'};margin-top:5px">${achieved?'✓ Goal achievable with these suggestions!':'Apply suggestions below to reach your goal'}</div>`;
+}
+
+async function runSavingsAI(){
+  const btn=document.getElementById('savings-btn');
+  const el=document.getElementById('savings-content');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>';
+  el.innerHTML='<div class="status-msg status-loading"><span class="spinner"></span>Analyzing your spending patterns...</div>';
+
+  const txs=S.transactions;
+  const months=[...new Set(txs.map(t=>t.month))].sort();
+  if(months.length<2){
+    el.innerHTML='<div class="empty">Need at least 2 months of data for analysis.</div>';
+    btn.disabled=false;btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Analyze';
+    return;
+  }
+
+  // Build spending summary for AI
+  const catMonthly={};
+  const supMonthly={};
+  months.forEach(m=>{
+    const mTxs=txs.filter(t=>t.month===m);
+    mTxs.forEach(t=>{
+      if(!catMonthly[t.category])catMonthly[t.category]=[];
+      catMonthly[t.category].push(t.amount);
+      const sk=fixRTL(t.supplier);
+      if(!supMonthly[sk])supMonthly[sk]=[];
+      supMonthly[sk].push(t.amount);
+    });
+  });
+
+  const catAvg=Object.entries(catMonthly).map(([cat,vals])=>({
+    cat,avg:vals.reduce((a,b)=>a+b,0)/months.length,total:vals.reduce((a,b)=>a+b,0),count:vals.length
+  })).sort((a,b)=>b.avg-a.avg);
+
+  const topSups=Object.entries(supMonthly)
+    .map(([sup,vals])=>({sup,avg:vals.reduce((a,b)=>a+b,0)/months.length,visits:vals.length,total:vals.reduce((a,b)=>a+b,0)}))
+    .filter(s=>s.visits>=2&&s.avg>20)
+    .sort((a,b)=>b.avg-a.avg)
+    .slice(0,15);
+
+  const goal=S.savingsGoal?`The user has a savings goal of ₪${S.savingsGoal}/month.`:'';
+
+  const prompt=`You are a personal finance advisor analyzing Israeli credit card spending.
+${goal}
+
+Monthly category averages (₪):
+${catAvg.map(c=>`- ${c.cat}: ₪${Math.round(c.avg)}/month (${c.count} transactions over ${months.length} months)`).join('\n')}
+
+Top recurring suppliers:
+${topSups.map(s=>`- ${s.sup}: ₪${Math.round(s.avg)}/month avg, ${s.visits} total visits`).join('\n')}
+
+Provide 4-6 specific, actionable saving suggestions. For each:
+1. Be specific about the supplier OR category
+2. Give a realistic reduction (not 100%)
+3. Calculate monthly AND annual saving
+4. Give a practical tip
+
+Return ONLY a JSON array, no markdown:
+[{
+  "emoji": "☕",
+  "title": "Short catchy title",
+  "category": "Coffee",
+  "supplier": "specific supplier or null",
+  "currentMonthly": 380,
+  "suggestionPct": 25,
+  "monthlySaving": 95,
+  "annualSaving": 1140,
+  "tip": "Practical 1-sentence tip"
+}]`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await res.json();
+    const txt=data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
+    const insights=JSON.parse(txt);
+    S.savingsInsights=insights;
+    saveState();
+    renderSavingsCards(insights);
+    renderGoalProgress();
+  }catch(e){
+    el.innerHTML=`<div class="status-msg status-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>AI unavailable. Try again later.</div>`;
+  }
+  btn.disabled=false;
+  btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Re-analyze';
+}
+
+function renderSavingsCards(insights){
+  const el=document.getElementById('savings-content');
+  const totalMonthly=insights.reduce((s,i)=>s+i.monthlySaving,0);
+  const totalAnnual=insights.reduce((s,i)=>s+i.annualSaving,0);
+  el.innerHTML=`
+    <div style="background:var(--green-dim);border:1px solid rgba(61,214,140,.2);border-radius:var(--radius);padding:14px;margin-bottom:14px">
+      <div style="font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Total potential saving</div>
+      <div style="display:flex;align-items:baseline;gap:10px">
+        <div style="font-size:26px;font-weight:600;font-family:var(--mono);color:var(--green)">₪${Math.round(totalMonthly).toLocaleString()}<span style="font-size:13px;font-weight:400">/month</span></div>
+        <div style="font-size:14px;color:var(--green);opacity:.7">₪${Math.round(totalAnnual).toLocaleString()}/year</div>
+      </div>
+    </div>
+    ${insights.map(ins=>`
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+        <div style="width:40px;height:40px;border-radius:10px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${ins.emoji}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:500">${ins.title}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${ins.category}${ins.supplier?' · '+ins.supplier:''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:15px;font-weight:600;font-family:var(--mono);color:var(--green)">-₪${Math.round(ins.monthlySaving).toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--text3)">₪${Math.round(ins.annualSaving).toLocaleString()}/yr</div>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px">
+          <span style="color:var(--text3)">Current: ₪${Math.round(ins.currentMonthly).toLocaleString()}/mo</span>
+          <span style="color:var(--green)">Reduce by ${ins.suggestionPct}%</span>
+        </div>
+        <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+          <div style="width:${ins.suggestionPct}%;height:100%;border-radius:3px;background:var(--green)"></div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">💡 ${ins.tip}</div>
+    </div>`).join('')}`;
 }
 
 function clearAll(){
