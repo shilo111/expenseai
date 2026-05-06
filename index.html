@@ -408,10 +408,10 @@ body{border-left:1px solid var(–border);border-right:1px solid var(–border)}
 
   <div class="page" id="page-upload">
     <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
-      <input type="file" id="fileInput" accept=".pdf,application/pdf,.json,application/json" multiple style="display:none" onchange="handleFiles(this.files)">
+      <input type="file" id="fileInput" accept=".pdf,application/pdf,.xlsx,.xls,.json,application/json" multiple style="display:none" onchange="handleFiles(this.files)">
       <div class="upload-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-      <div class="upload-title">Tap to upload PDFs</div>
-      <div class="upload-sub">Hebrew & English · Multiple files OK</div>
+      <div class="upload-title">Tap to upload files</div>
+      <div class="upload-sub">PDF · Excel (xlsx) · Isracard & MAX</div>
     </div>
     <div id="upload-status"></div>
     <div id="preview-section" style="display:none;margin-top:12px">
@@ -572,7 +572,7 @@ dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');ha
 async function handleFiles(files){
   const st=document.getElementById('upload-status');
 
-  // Check if any file is JSON — import directly
+  // JSON backup import
   for(const f of files){
     if(f.name.endsWith('.json')||f.type==='application/json'){
       st.innerHTML=`<div class="status-msg status-loading"><span class="spinner"></span>Importing backup...</div>`;
@@ -580,15 +580,12 @@ async function handleFiles(files){
       try{
         const parsed=JSON.parse(text);
         if(!parsed.transactions){throw new Error('Invalid format')}
-        // Merge — add transactions not already present (by id)
         const existingIds=new Set(S.transactions.map(t=>String(t.id)));
         const newTxs=parsed.transactions.filter(t=>!existingIds.has(String(t.id)));
         S.transactions.push(...newTxs);
-        // Merge mapping
         Object.assign(S.mapping, parsed.mapping||{});
         if(parsed.budgets)Object.assign(S.budgets,parsed.budgets);
-        saveState();
-        updateAnomalyDot();
+        saveState();updateAnomalyDot();
         st.innerHTML=`<div class="status-msg status-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg>Imported ${newTxs.length} new transactions from ${f.name}</div>`;
         document.getElementById('preview-section').style.display='none';
         return;
@@ -599,13 +596,18 @@ async function handleFiles(files){
     }
   }
 
-  // PDF flow
   st.innerHTML=`<div class="status-msg status-loading"><span class="spinner"></span>Reading ${files.length} file(s)...</div>`;
   S.pending=[];
   const fileResults=[];
+
   for(const f of files){
-    const pages=await extractPDF(f);
-    const txs=parseTx(pages,f.name);
+    let txs=[];
+    if(f.name.endsWith('.xlsx')||f.name.endsWith('.xls')){
+      txs=await parseXLSX(f);
+    } else {
+      const pages=await extractPDF(f);
+      txs=parseTx(pages,f.name);
+    }
     S.pending.push(...txs);
     const total=txs.reduce((s,t)=>s+t.amount,0);
     const foreign=txs.filter(t=>t.isForeign);
@@ -643,6 +645,86 @@ async function handleFiles(files){
     </div>`;
   document.getElementById('preview-stats').textContent=`${S.pending.length} rows`;
   showPreview();
+}
+
+// ── XLSX PARSER ──────────────────────────────────────
+async function parseXLSX(file){
+  return new Promise(resolve=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        if(typeof XLSX==='undefined'){resolve([]);return}
+        const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        const txs=[];
+
+        wb.SheetNames.forEach(sheetName=>{
+          const ws=wb.Sheets[sheetName];
+          const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+
+          // Detect billing month from header rows (e.g. "מאי 2026")
+          const MONTHS_HE={ינואר:1,פברואר:2,מרץ:3,אפריל:4,מאי:5,יוני:6,יולי:7,אוגוסט:8,ספטמבר:9,אוקטובר:10,נובמבר:11,דצמבר:12};
+          let billingMonth=null;
+          for(const row of rows.slice(0,10)){
+            for(const cell of row){
+              if(!cell)continue;
+              const str=String(cell).trim();
+              const m=str.match(/^([\u05D0-\u05EA]+)\s+(\d{4})$/);
+              if(m&&MONTHS_HE[m[1]]){
+                let mo=MONTHS_HE[m[1]]-1; // one month back
+                let yr=parseInt(m[2]);
+                if(mo===0){mo=12;yr--;}
+                billingMonth=`${String(mo).padStart(2,'0')}/${String(yr).slice(-2)}`;
+                break;
+              }
+            }
+            if(billingMonth)break;
+          }
+          if(!billingMonth){
+            const n=new Date();n.setMonth(n.getMonth()-1);
+            billingMonth=`${String(n.getMonth()+1).padStart(2,'0')}/${String(n.getFullYear()).slice(-2)}`;
+          }
+
+          // Find transaction rows: col0 matches DD.MM.YY
+          const DATE_RX=/^\d{2}\.\d{2}\.\d{2}$/;
+          for(const row of rows){
+            const dateCell=row[0];
+            if(!dateCell)continue;
+            const dateStr=String(dateCell).trim();
+            if(!DATE_RX.test(dateStr))continue;
+
+            const supplier=String(row[1]||'').trim();
+            if(!supplier)continue;
+
+            // col4 = סכום חיוב (charge amount)
+            let amount=parseFloat(String(row[4]||'0').replace(/,/g,''));
+            if(!amount||amount<=0)continue;
+
+            const note=String(row[7]||'').trim();
+            const isForeign=note.includes('חו"ל')||note.includes("חו'ל");
+            const currency=isForeign?'USD':'ILS';
+
+            // Convert date DD.MM.YY → DD/MM/YY
+            const parts=dateStr.split('.');
+            const date=`${parts[0]}/${parts[1]}/${parts[2]}`;
+
+            const cat=S.mapping[norm(supplier)]||'';
+            txs.push({
+              id:Date.now()+Math.random(),
+              date,supplier,amount,category:cat,
+              month:billingMonth,currency,isForeign,
+              source:file.name,autoMapped:!!cat
+            });
+          }
+        });
+
+        resolve(txs);
+      }catch(err){
+        console.error('XLSX parse error:',err);
+        resolve([]);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
 }
 
 async function extractPDF(file){
