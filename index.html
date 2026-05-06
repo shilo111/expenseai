@@ -4,8 +4,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="ExpenseAI">
 <meta name="theme-color" content="#0f0f0f">
 <title>ExpenseAI</title>
@@ -40,10 +41,12 @@
   --radius-sm:8px;
   --font:'DM Sans',sans-serif;
   --mono:'DM Mono',monospace;
+  color-scheme:dark;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;overscroll-behavior:none}
-body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;min-height:100vh;position:relative}
+html{background:#0f0f0f;color:#f0ede8}
+html,body{height:100%;background:#0f0f0f;color:#f0ede8;font-family:'DM Sans',system-ui,sans-serif;font-size:14px;line-height:1.5;overscroll-behavior:none}
+body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;min-height:100vh;position:relative;background:#0f0f0f}
 
 /* TOP BAR */
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px;background:var(–bg);position:sticky;top:0;z-index:100;border-bottom:1px solid var(–border)}
